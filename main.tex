@@ -12,54 +12,72 @@ Homère Tandeau de Marsac \email{Homere.TANDEAU-DE-MARSAC@eleves.enpc.fr} % stud
 \begin{document}
 \maketitle
 
-\paragraph{What is expected for these mini-projects?}
-The goal of the exercise is to read (and understand) a research article, implement it (or find an implementation), test it on real data and comment on the results obtained.
-Depending on the articles, the task will not always be the same: some articles are more theoretical or complex, others are in the direct line of the course, etc... It is therefore important to balance the exercise according to the article. For example, if you have reused an existing implementation, it is obvious that you will have to develop in a more detailed way the analysis of the results, the influence of the parameters etc... Do not hesitate to contact us by email if you wish to be guided.
-
-\paragraph{The report}
- The report must be at most FIVE pages and use this template (excluding references). If needed, additional images and tables can be put in Appendix, but must be discussed in the main document. The report must contain a precise description of the work done, a description of the method, and the results of your tests. Please do not include source code! The report must clearly show the elements that you have done yourself and those that you have reused only, as well as the distribution of tasks within the team (see detailed plan below.)
- 
- \paragraph{The source code}
-In addition to this report, you will have to send us a Python notebook allowing to launch the code and to test it on data. For the data, you can find it on standard sites like Kaggle, or the site https://timeseriesclassification.com/ which contains a lot of signals!
-
-
-\paragraph{The oral presentations}
-They will last 10 minutes followed by 5 minutes of questions. The plan of the defense is the same as the one of the report: presentation of the work done, description of the method and analysis of the results.
-
-
-\paragraph{Deadlines}
-Two sessions will be available :
-\begin{itemize}
- \item \textbf{Session 1}
- \begin{itemize}
-  \item Deadline for report: December 14th (23:59)
-  \item Oral presentations: December 15th and 17th (precise times TBA)
- \end{itemize}
-\item \textbf{Session 2}
- \begin{itemize}
-  \item Deadline for report: January 4th (23:59)
-  \item Oral presentations: January, 5th and 7th (precise times TBA)
- \end{itemize}
-\end{itemize}
-
-\section{Introduction and contributions}
-
-The Introduction section (indicative length : less than 1 page) should detail the scientific context of the article you chose, as well as the task that you want to solve (especially if you apply it on novel data). \textbf{The last paragraph of the introduction must contain the following information}:
-\begin{itemize}
-    \item Repartition of work between the two students
-    \item Use of available source code or not, percentage of the source code that has been reused, etc.
-    \item Use of existing experiments or new experiments (e.g. test of the influence of parameter that was not conducted in the original article, application of the method on a novel task/data set etc.)
-    \item Improvement on the original method (e.g. new pre/post processing steps, grid search for optimal parameters etc.)
-\end{itemize}
 
 \section{Method}
 
-The Method section (indicative length : 1 to 2 pages) should describe the mathematical aspects of the method in a summarized manner. Only the main steps that are useful for understanding should be highlighted. If relevant, some details on implementation can be provided (but only marginally).
+
+Let $\{x_t\}_{t=1}^T$ denote a multivariate time series, where $x_t \in \mathbb{R}^d$ represents ideological measurements observed at time $t$. To construct a supervised learning problem, the original time series is transformed into a design matrix using past information only. For each time index $t$, a feature vector $X_t$ is built from lagged values and rolling statistics computed over a finite historical window.
+
+An example of a classification target $y_t \in \{0,1\}$ is defined as the sign of a future variation of a reference series over a fixed horizon $h$. Concretely, $y_t = 1$ if the reference series increases between $t$ and $t+h$, and $y_t = 0$ otherwise. This yields a binary time-series classification problem, where the task is to predict the direction of future movement using historical multivariate dynamics.
+
+
+\subsection{Laplacian Score for feature selection}
+
+Laplacian Score is an unsupervised feature selection method designed to preserve the local geometric structure of the data. Given a feature matrix $X \in \mathbb{R}^{n \times p}$, an affinity graph is constructed using a $k$-nearest neighbor rule. The affinity between observations $x_i$ and $x_j$ is defined by a heat kernel
+\[
+S_{ij} = \exp\left(-\frac{\|x_i - x_j\|^2}{t}\right)
+\]
+whenever $x_j$ belongs to the neighborhood of $x_i$, and zero otherwise. Let $D$ denote the diagonal degree matrix with entries $D_{ii} = \sum_j S_{ij}$. The graph Laplacian is then defined as $L = D - S$.
+
+For each feature $f_i$, the Laplacian Score is given by
+\[
+\text{LS}(f_i) = \frac{\tilde f_i^\top L \tilde f_i}{\tilde f_i^\top D \tilde f_i},
+\]
+where $\tilde f_i$ denotes the $D$-centered version of $f_i$. Features with small Laplacian Scores vary smoothly along the data manifold and are considered representative of the intrinsic structure. Feature selection is performed by ranking features individually and retaining the top-ranked subset.
+
+In the present context, Laplacian Score is applied to the expanded feature matrix prior to supervised learning, using only the training data.
+
+
 
 \section{Data}
-The Data section (indicative length : 1 page) should provide a deep analysis of the data used for experiment. In particular, we are interested here in your capacity to provide relevant and thoughtful feedbacks on the data and to demonstrate that you master some "data diagnosis" tools that have been dealt with in the lectures/tutorials.
+
+\subsection{Dutch political orientation time series}
+
+The dataset consists of a multivariate time series with $988$ observations and $13$ variables, derived from a Dutch weekly survey on political orientation. Each observation corresponds to one survey period, ordered in time by a strictly increasing index. No explicit calendar dates are provided; the temporal structure is implicit.
+
+The main variables (`Orr`, `Vvd`, `Cda`, `D66`, `Pvda`, `Glef`) represent average left--right ideological self-placement scores, either at the aggregate population level or associated with specific political parties. Each ideological series is accompanied by a corresponding sample-size variable (`wn*`), indicating the number of respondents used to compute the weekly average. These variables provide information about the reliability of the ideological measurements.
+
+All variables are fully observed, with no missing values and no duplicated rows. Visual inspection and basic diagnostics indicate strong temporal smoothness in the ideological series, suggesting dominant low-frequency dynamics. Cross-series dependence is expected due to shared political context and overlapping electorates. The sample-size variables exhibit non-negligible variability over time and may influence the stability of the ideological estimates.
+
+To make feature selection non-trivial, the raw time series are expanded into a higher-dimensional representation using lagged values and rolling statistics computed over past windows. This transformation introduces redundancy and correlation among features, while preserving causality by relying exclusively on historical observations.
+We consider the problem of feature selection for multivariate time series in a classification setting. The objective is to identify a subset of features that captures the intrinsic structure of the data while reducing dimensionality prior to supervised learning.
 
 \section{Results}
-The Result section (indicative length : 1 to 2 pages) \textbf{should display numerical simulations on real time series} (even if the original article was focused on images). If you re-used some existing implementations, it is expected that this section develops new experiments that were not present in the original article. Results should be discussed not only based on quantative scores but also on qualitative aspects. In particular (especially if your article focuses on black box methods), please provide some feedbacks whether the method was adapted to the data or not and whether the hypothesis behind the approach you used were validated or not.
+
+\subsection{Laplacian Score}
+
+Laplacian Score is applied to the expanded feature matrix prior to classification. Since the method is unsupervised, it operates solely on the feature space $X$ (training split), without access to the labels. An affinity graph is constructed using a $k$-nearest neighbor rule in the expanded feature space, and features are ranked according to their ability to preserve the local geometric structure of the data manifold.
+
+In this context, Laplacian Score favors features that are smooth with respect to the intrinsic dynamics of the multivariate time series, while penalizing noisy or weakly structured features. The selected subset is then used as input to a supervised classifier, which makes it possible to assess how well manifold-preserving features support downstream prediction.
+
+In our experiment, we build a $k_{\mathrm{NN}}=10$ nearest-neighbor graph and retain the top $k=30$ features (smallest scores). The best-ranked features are dominated by rolling means (especially with a $12$-week window), along with a smaller number of lagged variables. Figure~\ref{fig:laplace-scores} shows the resulting ranking.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\linewidth]{fig/laplace_scores}
+\caption{Laplacian Score ranking for the $k=30$ selected features (lower is better).}
+\label{fig:laplace-scores}
+\end{figure}
+
+Laplacian was presented as a way to preserve feature manifold geometry. Figure~\ref{fig:laplace-geometry} compares 2D PCA embeddings of standardized observations computed from the full feature space and from the Laplacian-selected subset; the two representations are visually similar, indicating that geometry is effectively preserved.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{fig/manifold_geometry}
+\caption{2D PCA embedding of standardized observations using the full feature space (left) and the Laplacian-selected subset (right).}
+\label{fig:laplace-geometry}
+\end{figure}
+
+Finally, we evaluate the selected subset in a simple downstream task: predicting whether \texttt{Orr} increases over the next $h=4$ weeks using logistic regression. Using the full feature set yields an accuracy of $0.645$, while restricting to the Laplacian-selected features reduces accuracy to $0.556$. This value remains above chance but reflects a substantial loss of discriminative information relative to the full feature space. This behavior is consistent with the objective of Laplacian Score: the method selects features that preserve the intrinsic geometric structure of the data rather than those that are maximally informative for the supervised task.
 
 \end{document}

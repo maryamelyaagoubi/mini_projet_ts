@@ -6,6 +6,5 @@ dtw-python
 scipy
 scikit-learn
 git+https://github.com/alphacsc/alphacsc.git
-git+https://github.com/jundongl/scikit-feature.git
 statsmodels
 ipython
